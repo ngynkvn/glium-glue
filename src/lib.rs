@@ -1,4 +1,4 @@
-mod sdl2;
+pub mod sdl2;
 
 #[cfg(test)]
 mod tests {
