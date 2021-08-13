@@ -7,12 +7,12 @@ pub trait DisplayBuild {
     type Facade: glium::backend::Facade;
     type Err;
 
-    fn build_glium(self) -> Result<Self::Facade, Self::Err>;
+    fn build_glium(&mut self) -> Result<Self::Facade, Self::Err>;
 }
 
 pub struct SDL2Facade {
-    backend: Rc<SDL2Backend>,
-    context: Rc<Context>,
+    pub backend: Rc<SDL2Backend>,
+    pub context: Rc<Context>,
 }
 impl SDL2Facade {
     pub fn draw(&self) -> glium::Frame {
@@ -31,7 +31,7 @@ pub struct SDL2Backend {
 }
 
 impl SDL2Backend {
-    fn new(mut builder: sdl2_video::WindowBuilder) -> Self {
+    fn new(builder: &mut sdl2_video::WindowBuilder) -> Self {
         let window = builder.opengl().build().unwrap();
         let context = window.gl_create_context().unwrap();
         Self { window, context }
@@ -67,13 +67,20 @@ impl Facade for SDL2Facade {
     }
 }
 
+use thiserror::Error;
+
+#[derive(Error, Debug)]
+pub enum GliumGlueError {
+    #[error("Could not create OpenGL Context.")]
+    ContextCreationError(#[from] glium::IncompatibleOpenGl),
+}
 impl DisplayBuild for sdl2::video::WindowBuilder {
     type Facade = SDL2Facade;
 
     //TODO
-    type Err = ();
+    type Err = GliumGlueError;
 
-    fn build_glium(self) -> Result<Self::Facade, Self::Err> {
+    fn build_glium(&mut self) -> Result<Self::Facade, Self::Err> {
         unsafe {
             let backend = Rc::new(SDL2Backend::new(self));
             let facade = SDL2Facade {
@@ -82,8 +89,7 @@ impl DisplayBuild for sdl2::video::WindowBuilder {
                     backend,
                     true,
                     glium::debug::DebugCallbackBehavior::DebugMessageOnError,
-                )
-                .unwrap(),
+                )?,
             };
             Ok(facade)
         }

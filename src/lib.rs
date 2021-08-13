@@ -1,3 +1,4 @@
+extern crate glium;
 pub mod sdl2;
 
 #[cfg(test)]
